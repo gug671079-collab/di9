@@ -11,34 +11,7 @@
   const params = new URLSearchParams(location.search);
   const previewSchool = illustratedSchools.find(school => school.id === params.get("preview"));
   const sessionKey = "mdi:sorting-hat:quiz:1" + (previewSchool ? ":preview:" + previewSchool.id : "");
-  // Earlier preview URLs keep their original title; the default uses the working IP name.
-  const themes = {
-    live: ["快乐云", "上线"], which: ["今天", "哪朵云？"], match: ["云上", "对个号"]
-  };
-  const requested = params.get("theme");
-  const theme = Object.hasOwn(themes, requested) ? requested : null;
-  const nameLines = theme ? themes[theme] : ["云朵", "分院帽"];
-  const title = nameLines.join("");
-  const titlePicker = document.createElement("details");
-  if (!quiz.ready) {
-    titlePicker.className="title-picker";
-    titlePicker.append(el("summary","","切换首页标题"));
-    const nav=el("nav");
-    nav.setAttribute("aria-label","首页标题方案");
-    for (const [id,lines] of Object.entries({home:["云朵","分院帽"],...themes})) {
-      const link=el("a","",lines.join(""));
-      const url=new URL(location.href);
-      if (id==="home") url.searchParams.delete("theme");
-      else url.searchParams.set("theme",id);
-      url.hash="home";
-      link.href=url.href;
-      if (id===(theme || "home")) link.setAttribute("aria-current","page");
-      nav.append(link);
-    }
-    titlePicker.append(nav);
-    document.querySelector("footer").lastElementChild.replaceWith(titlePicker);
-  }
-  document.documentElement.dataset.theme = theme || "live";
+  const title = "云朵分院帽";
   const motionPreference = matchMedia("(prefers-reduced-motion: reduce)");
   let session = resume();
   let view;
@@ -81,9 +54,7 @@
     clearTimeout(timer);
     view = phase;
     document.body.dataset.screen = phase;
-    titlePicker.hidden=phase!=="home";
-    titlePicker.open=false;
-    document.title = title + " · " + ({home:"设创双年晚会",question:"答题",reveal:"分院揭晓",result:"我的分院结果",school:"分院结果",card:"我的学生证"})[phase];
+    document.title = phase === "home" ? title : title + " · " + ({question:"答题",reveal:"分院揭晓",result:"我的分院结果",school:"分院结果",card:"我的学生证"})[phase];
     main.replaceChildren(content);
     window.scrollTo(0,0);
     if (focus) {
@@ -113,19 +84,10 @@
     link.href = url.href;
     return link;
   }
-  function previewLinks() {
-    const nav = el("nav","school-links");
-    nav.setAttribute("aria-label","预览学院结果");
-    nav.append(el("span","","学院预览"),...illustratedSchools.map(school => schoolLink(school)));
-    return nav;
-  }
   function home(focus = true) {
     const section = el("section","landing");
-    const copy = el("div","hero-copy");
     const mark = el("h1","wordmark");
-    mark.setAttribute("aria-label",title);
-    for (const line of nameLines) mark.append(el("span","",line));
-    copy.append(el("p","home-kicker","设创生活测试"),mark);
+    mark.append(el("span","sr-only",title),document.getElementById("cover-title").content.cloneNode(true));
     const actions = el("div","home-actions");
     if (session && session.phase !== "result") {
       actions.append(btn("继续分院","action",() => {
@@ -137,11 +99,9 @@
         history.replaceState(null,"","#result"); result();
       }));
     }
-    copy.append(actions);
-    if (!quiz.ready && illustratedSchools.length) copy.append(previewLinks());
     const visual = el("div","hero-art");
     visual.append(art("idle","笑着扬起帽檐的云朵分院帽"));
-    section.append(copy,visual);
+    section.append(mark,visual,actions);
     mount("home",section,focus);
   }
   function question(focus = true, lastTap = null) {
@@ -236,7 +196,6 @@
     const panel=el("div","result-panel");
     panel.append(el("h2","","我的九维得分"));
     panel.append(scoreList(item));
-    if (!quiz.ready && illustratedSchools.length) panel.append(previewLinks());
     const notice=el("div","alumni");panel.append(notice);
     const actions=el("div","panel-actions");
     const status=el("p","hint");status.setAttribute("role","status");
@@ -295,7 +254,7 @@
     panel.append(actions);
     if (previewSchool) {
       const others = illustratedSchools.filter(entry=>entry.id!==school.id);
-      panel.append(el("p","school-mode","学院预览 · 本次不计入校友人数"));
+      panel.append(el("p","school-mode","本次试玩不计入校友人数"));
       const nav=el("div","school-links");
       nav.append(btn(session && session.phase==="question" ? "继续答题" : "从第一题试玩","quiet",() => {
         if (session?.phase==="question") { history.replaceState(null,"","#play"); continueRun(); }
@@ -462,7 +421,7 @@
     ctx.fillText(title,57,gridBottom+128);
     ctx.fillStyle="#e1f464";ctx.font="26px "+type;
     ctx.fillText(item.id ? "扫码参与分院" : "扫码试玩",58,gridBottom+176);
-    window.QuizQR.draw(ctx,theme || "home",548,gridBottom+16,250);
+    window.QuizQR.draw(ctx,"home",548,gridBottom+16,250);
     return c.toDataURL("image/png");
   }
   function cardActions(item,status) {
