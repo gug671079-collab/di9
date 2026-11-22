@@ -100,8 +100,8 @@
       }));
     }
     const visual = el("div","hero-art");
-    visual.append(art("idle","笑着扬起帽檐的云朵分院帽"));
-    section.append(mark,visual,actions);
+    visual.append(document.getElementById("cover-hat").content.cloneNode(true));
+    section.append(document.getElementById("cover-sky").content.cloneNode(true),mark,visual,actions);
     mount("home",section,focus);
   }
   function question(focus = true, lastTap = null) {
