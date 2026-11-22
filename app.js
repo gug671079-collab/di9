@@ -125,8 +125,7 @@
     const mark = el("h1","wordmark");
     mark.setAttribute("aria-label",title);
     for (const line of nameLines) mark.append(el("span","",line));
-    copy.append(el("p","home-kicker","设创生活测试"),mark,
-      el("p","home-summary",quiz.modules.length+" 个模块　/　"+quiz.main.length+" 道三选一"));
+    copy.append(el("p","home-kicker","设创生活测试"),mark);
     const actions = el("div","home-actions");
     if (session && session.phase !== "result") {
       actions.append(btn("继续分院","action",() => {
@@ -142,42 +141,23 @@
     if (!quiz.ready && illustratedSchools.length) copy.append(previewLinks());
     const visual = el("div","hero-art");
     visual.append(art("idle","笑着扬起帽檐的云朵分院帽"));
-    const modules = el("ol","module-strip");
-    modules.setAttribute("aria-label","测试模块");
-    for (const [i,m] of quiz.modules.entries()) {
-      const li=el("li");
-      li.append(el("b","",String(i+1).padStart(2,"0")),el("span","",m.label));
-      modules.append(li);
-    }
-    section.append(copy,visual,modules);
+    section.append(copy,visual);
     mount("home",section,focus);
   }
   function question(focus = true, lastTap = null) {
     session.phase = "question";
     const n = session.index;
     const q = quiz.main[n];
-    const axis = quiz.axes[q.axis];
-    const module = quiz.modules.find(m=>m.id === q.module);
     const section = el("section","flow");
-    const aside = el("aside","flow-aside");
-    aside.append(art("idle"),el("p","aside-title",module.label));
-    const list = el("ol","module-nav");
-    list.setAttribute("aria-label","模块进度");
-    for (const [i,m] of quiz.modules.entries()) {
-      const li=el("li","",String(i+1).padStart(2,"0")+"　"+m.label);
-      if (m.id === module.id) {li.className="current";li.setAttribute("aria-current","step");}
-      list.append(li);
-    }
-    aside.append(list);
+    const hat = art("idle");
+    hat.className = "flow-hat";
     const panel = el("div","question-panel");
-    const step = el("div","step");
-    step.append(el("span","",module.label),el("span","","第 "+(n+1)+" / "+quiz.main.length+" 题"));
     const progress = el("progress","progress");
     progress.max = quiz.main.length; progress.value = n+1;
     progress.setAttribute("aria-label","答题进度");
+    progress.setAttribute("aria-valuetext",`第 ${n+1} 题，共 ${quiz.main.length} 题`);
     const hasCopy = q.text.trim() && q.options.every(option => option.trim());
-    const dimension = el("p","dimension",hasCopy ? axis.label : "题目待填");
-    const heading = el("h1","",hasCopy ? q.text : axis.label);
+    const heading = el("h1","",hasCopy ? q.text : "题目待填");
     heading.id="prompt";
     const choices = el("div","scale");
     choices.setAttribute("role","group");
@@ -205,8 +185,8 @@
       if (n===0) return home();
       session.index--;save();question();
     }));
-    panel.append(step,progress,dimension,heading,choices,actions);
-    section.append(aside,panel);
+    panel.append(progress,heading,choices,actions);
+    section.append(hat,panel);
     mount("question",section,focus);
   }
   function reveal(focus = true) {
@@ -273,8 +253,7 @@
   function scoreList(item) {
     const chart=el("div","score-list");
     for (const m of quiz.modules) {
-      const group=el("section","score-group");
-      group.append(el("h3","",m.label));
+      const group=el("div","score-group");
       for (const axis of m.axes) {
         const row=el("div","score-row");
         const label=quiz.axes[axis].label;
@@ -471,10 +450,8 @@
       if (column>0) {
         ctx.fillStyle="#d4dcd6";ctx.fillRect(left,gridTop+20,2,202);
       }
-      ctx.textAlign="left";ctx.fillStyle="#1046c6";ctx.font="800 28px "+type;
-      ctx.fillText(module.label,left+19,gridTop+47);
       for (const [row,axis] of module.axes.entries()) {
-        const baseline=gridTop+101+row*51;
+        const baseline=gridTop+56+row*65;
         ctx.textAlign="left";ctx.fillStyle="#142c52";ctx.font="24px "+type;
         ctx.fillText(quiz.axes[axis].label,left+19,baseline);
         ctx.textAlign="right";ctx.font="700 24px "+type;
