@@ -139,6 +139,30 @@ footer a:hover { color: var(--lime); }
 .result-count .quiet { margin-left: 8px; }
 .card-preview { margin-top: 10px; }
 .card-original { display: block; width: 100%; max-width: 375px; height: auto; margin-top: 8px; }
+.sr-only { position:absolute; width:1px; height:1px; padding:0; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+.school-links { display:flex; flex-wrap:wrap; align-items:center; gap:2px 16px; margin:10px 0 0; }
+.school-links > span { font-size:12px; opacity:.8; }
+body:is([data-screen=school],[data-screen=card]) :is(.mast,footer) { display:none; }
+body:is([data-screen=school],[data-screen=card]) main { width:100%; }
+.illustrated-result,.student-card { width:min(100%, 1000px); margin:auto; display:grid; grid-template-columns:minmax(0,460px) minmax(220px,1fr); align-items:center; column-gap:clamp(28px,6vw,80px); padding:24px; }
+.school-poster { background:#fcf9f1; color:#102d76; overflow:hidden; }
+.school-illustration { aspect-ratio:941/1494; overflow:hidden; }
+.school-illustration img,.student-id { display:block; width:100%; height:auto; }
+.school-verdict { min-height:clamp(48px,7.5vw,89px); padding:6px 4.25% 6%; font-size:clamp(16px,2.4vw,20px); line-height:1.55; overflow-wrap:anywhere; white-space:pre-wrap; }
+.school-tools { min-width:0; }
+.school-tools .panel-actions { margin:0; align-items:center; }
+.school-tools .action:not([href]) { opacity:.5; pointer-events:none; }
+.school-mode,.school-tools .result-count { margin:12px 0 0; color:#f0f4ff; font-size:14px; }
+.school-scores { margin-top:18px; padding:15px; color:var(--navy); background:var(--paper); }
+.school-scores summary { font-weight:bold; }
+.school-scores .score-list { margin-bottom:0; }
+.student-id { max-width:460px; }
+@media (max-width:650px) {
+  .illustrated-result,.student-card { display:block; max-width:480px; padding:0; margin:0 auto; }
+  .school-tools { padding:18px var(--inset) max(26px,env(safe-area-inset-bottom)); }
+  .hero-copy>.school-links { grid-column:1; grid-row:6; margin-top:5px; }
+  .landing:has(.school-links) .module-strip { grid-row:7; }
+}
 @media (min-width:1500px) {
   .mast { min-height: 90px; }
   .landing { grid-template-rows:minmax(570px,1fr) auto; }

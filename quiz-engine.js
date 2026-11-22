@@ -7,22 +7,23 @@
     id, label, axes: dimensions.map(dimension => dimension.id)
   }));
   const axes = Object.fromEntries(content.modules.flatMap(module =>
-    module.dimensions.map(({id, label}) => [id, {label, module: module.id}])
+    module.dimensions.map(({id, label, questionIds}) =>
+      [id, {label, module: module.id, questionCount: questionIds.length}])
   ));
   const axisKeys = modules.flatMap(module => module.axes);
   const ranks = {low: 0, mid: 1, high: 2};
   const tierLabels = {low: "低", mid: "中", high: "高"};
 
-  // Keep two questions per dimension, including the empty slots in rehearsal.
-  const main = modules.flatMap(module => [0, 1].flatMap(() =>
-    module.axes.map(axis => ({axis, module: module.id}))
-  )).map((slot, index) => {
-    const id = "Q" + String(index + 1).padStart(2, "0");
-    const row = content.questions.find(item => item.id === id);
+  // Keep the original authoring IDs across revisions, even for unfinished questions.
+  const slots = content.modules.flatMap(module =>
+    module.dimensions.flatMap(axis => axis.questionIds.map(id => ({id, axis: axis.id, module: module.id})))
+  ).sort((a, b) => a.id.localeCompare(b.id));
+  const main = slots.map(slot => {
+    const row = content.questions.find(item => item.id === slot.id);
     const options = [0, 1, 2].map(i => typeof row?.options?.[i] === "string" ? row.options[i] : "");
     const scoresValid = row?.scores?.length === 3 && [1, 2, 3].every(n => row.scores.includes(n));
     return {
-      ...slot, id, text: typeof row?.text === "string" ? row.text : "", options,
+      ...slot, text: typeof row?.text === "string" ? row.text : "", options,
       scores: scoresValid ? [...row.scores] : [1, 2, 3],
       configured: row?.axis === slot.axis && row.options?.length === 3 && scoresValid
     };
@@ -45,7 +46,7 @@
     patterns.add(pattern);
     return true;
   });
-  const ready = questionsReady && schoolsReady;
+  const ready = questionsReady && schoolsReady && !content.previewOnly;
 
   function closestSchool(levels) {
     let closest = null, bestDistance = Infinity, mostExact = -1;
@@ -74,15 +75,16 @@
     if (answers.length > main.length) throw new RangeError("答案超过本轮题数。");
     const scores = Object.fromEntries(axisKeys.map(axis => [axis, 0]));
     const levels = Object.fromEntries(axisKeys.map(axis => [axis, null]));
-    const seen = new Set();
+    const answeredPerAxis = Object.fromEntries(axisKeys.map(axis => [axis, 0]));
     answers.forEach((choice, index) => {
       const q = main[index];
       scores[q.axis] += q.scores[choice];
-      if (seen.has(q.axis)) {
+      const count = axes[q.axis].questionCount;
+      if (++answeredPerAxis[q.axis] === count) {
         const sum = scores[q.axis];
-        levels[q.axis] = sum < 4 ? "low" : sum === 4 ? "mid" : "high";
+        const midpoint = count * 2;
+        levels[q.axis] = sum < midpoint ? "low" : sum === midpoint ? "mid" : "high";
       }
-      seen.add(q.axis);
     });
     const nextQuestion = main[answers.length] || null;
     let result = null;

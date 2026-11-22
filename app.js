@@ -5,12 +5,17 @@
   const pictures = document.getElementById("cloud-art").content;
   const labels = ["A", "B", "C"];
   const levelNames = {low:"低", mid:"中", high:"高"};
-  const sessionKey = "mdi:sorting-hat:quiz:1";
+  const schoolArt = document.getElementById("school-art").content;
+  const illustratedSchools = quiz.schools.filter(school =>
+    school.id && Array.from(schoolArt.querySelectorAll('[data-kind="result"]')).some(img => img.dataset.school === school.id));
+  const params = new URLSearchParams(location.search);
+  const previewSchool = illustratedSchools.find(school => school.id === params.get("preview"));
+  const sessionKey = "mdi:sorting-hat:quiz:1" + (previewSchool ? ":preview:" + previewSchool.id : "");
   // Earlier preview URLs keep their original title; the default uses the working IP name.
   const themes = {
     live: ["快乐云", "上线"], which: ["今天", "哪朵云？"], match: ["云上", "对个号"]
   };
-  const requested = new URLSearchParams(location.search).get("theme");
+  const requested = params.get("theme");
   const theme = Object.hasOwn(themes, requested) ? requested : null;
   const nameLines = theme ? themes[theme] : ["云朵", "分院帽"];
   const title = nameLines.join("");
@@ -78,7 +83,7 @@
     document.body.dataset.screen = phase;
     titlePicker.hidden=phase!=="home";
     titlePicker.open=false;
-    document.title = title + " · " + ({home:"设创双年晚会",question:"答题",reveal:"分院揭晓",result:"我的分院结果"})[phase];
+    document.title = title + " · " + ({home:"设创双年晚会",question:"答题",reveal:"分院揭晓",result:"我的分院结果",school:"分院结果",card:"我的学生证"})[phase];
     main.replaceChildren(content);
     window.scrollTo(0,0);
     if (focus) {
@@ -88,7 +93,8 @@
     }
   }
   function start() {
-    window.QuizCounts?.newRun();
+    if (!previewSchool) window.QuizCounts?.newRun();
+    history.replaceState(null,"","#play");
     session = {revision:quiz.revision, answers:[], index:0, phase:"question"};
     save();
     question();
@@ -99,6 +105,20 @@
     if (session.phase === "reveal") return reveal(focus);
     question(focus);
   }
+  function schoolLink(school, text = school.title) {
+    const link = el("a","quiet",text);
+    const url = new URL(location.href);
+    url.hash = "";
+    url.searchParams.set("preview",school.id);
+    link.href = url.href;
+    return link;
+  }
+  function previewLinks() {
+    const nav = el("nav","school-links");
+    nav.setAttribute("aria-label","预览学院结果");
+    nav.append(el("span","","学院预览"),...illustratedSchools.map(school => schoolLink(school)));
+    return nav;
+  }
   function home(focus = true) {
     const section = el("section","landing");
     const copy = el("div","hero-copy");
@@ -106,15 +126,20 @@
     mark.setAttribute("aria-label",title);
     for (const line of nameLines) mark.append(el("span","",line));
     copy.append(el("p","home-kicker","设创生活测试"),mark,
-      el("p","home-summary","3 个模块　/　18 道三选一"));
+      el("p","home-summary",quiz.modules.length+" 个模块　/　"+quiz.main.length+" 道三选一"));
     const actions = el("div","home-actions");
     if (session && session.phase !== "result") {
-      actions.append(btn("继续分院","action",() => continueRun()),btn("重新开始","quiet",start));
+      actions.append(btn("继续分院","action",() => {
+        history.replaceState(null,"","#play"); continueRun();
+      }),btn("重新开始","quiet",start));
     } else {
       actions.append(btn(quiz.ready ? "开始分院" : "开始试玩","action",start));
-      if (session) actions.append(btn("查看上次结果","quiet",() => result()));
+      if (session) actions.append(btn("查看上次结果","quiet",() => {
+        history.replaceState(null,"","#result"); result();
+      }));
     }
     copy.append(actions);
+    if (!quiz.ready && illustratedSchools.length) copy.append(previewLinks());
     const visual = el("div","hero-art");
     visual.append(art("idle","笑着扬起帽檐的云朵分院帽"));
     const modules = el("ol","module-strip");
@@ -150,8 +175,9 @@
     const progress = el("progress","progress");
     progress.max = quiz.main.length; progress.value = n+1;
     progress.setAttribute("aria-label","答题进度");
-    const dimension = el("p","dimension",q.text ? axis.label : "题干待填");
-    const heading = el("h1","",q.text || axis.label);
+    const hasCopy = q.text.trim() && q.options.every(option => option.trim());
+    const dimension = el("p","dimension",hasCopy ? axis.label : "题目待填");
+    const heading = el("h1","",hasCopy ? q.text : axis.label);
     heading.id="prompt";
     const choices = el("div","scale");
     choices.setAttribute("role","group");
@@ -171,7 +197,7 @@
         }
       });
       choice.setAttribute("aria-pressed",String(session.answers[n]===i));
-      choice.append(el("b","letter",labels[i]),el("span","",option || "选项 "+labels[i]));
+      choice.append(el("b","letter",labels[i]),el("span","",hasCopy ? option : "选项 "+labels[i]));
       choices.append(choice);
     });
     const actions = el("div","panel-actions");
@@ -204,13 +230,21 @@
   }
   function finish(focus = true) {
     session.phase="result";
+    history.replaceState(null,"","#result");
     save();result(focus);
+  }
+  function scoreLabel(item,axis) {
+    const max = quiz.axes[axis].questionCount * 3;
+    return item.scores[axis]+"/"+max+" · "+levelNames[item.levels[axis]];
   }
   motionPreference.addEventListener("change",() => {
     if (view==="reveal" && motionPreference.matches) finish();
   });
   function result(focus = true) {
-    const item = quiz.getState(session.answers).result;
+    const item = session && quiz.getState(session.answers).result;
+    const school = previewSchool || illustratedSchools.find(entry => entry.id === item?.id);
+    if (school) return schoolResult(school,item,focus);
+    if (!item) return home(focus);
     const section = el("section","result-screen");
     const head=el("div","result-head");
     const block=el("div","result-copy");
@@ -221,22 +255,8 @@
     head.append(block,figure);
     const panel=el("div","result-panel");
     panel.append(el("h2","","我的九维得分"));
-    const chart=el("div","score-list");
-    for (const m of quiz.modules) {
-      const group=el("section","score-group");
-      group.append(el("h3","",m.label));
-      for (const axis of m.axes) {
-        const row=el("div","score-row");
-        const label=quiz.axes[axis].label;
-        const meter=el("meter");
-        meter.min=2;meter.max=6;meter.value=item.scores[axis];
-        meter.setAttribute("aria-label",label+"得分");
-        row.append(el("span","",label),meter,el("b","",item.scores[axis]+" · "+levelNames[item.levels[axis]]));
-        group.append(row);
-      }
-      chart.append(group);
-    }
-    panel.append(chart);
+    panel.append(scoreList(item));
+    if (!quiz.ready && illustratedSchools.length) panel.append(previewLinks());
     const notice=el("div","alumni");panel.append(notice);
     const actions=el("div","panel-actions");
     const status=el("p","hint");status.setAttribute("role","status");
@@ -248,6 +268,152 @@
     section.append(head,panel);
     mount("result",section,focus);
     window.QuizCounts?.attach(notice,item,session.answers);
+  }
+
+  function scoreList(item) {
+    const chart=el("div","score-list");
+    for (const m of quiz.modules) {
+      const group=el("section","score-group");
+      group.append(el("h3","",m.label));
+      for (const axis of m.axes) {
+        const row=el("div","score-row");
+        const label=quiz.axes[axis].label;
+        const meter=el("meter");
+        meter.min=quiz.axes[axis].questionCount;
+        meter.max=meter.min*3;
+        meter.value=item.scores[axis];
+        meter.setAttribute("aria-label",label+"得分");
+        row.append(el("span","",label),meter,el("b","",scoreLabel(item,axis)));
+        group.append(row);
+      }
+      chart.append(group);
+    }
+    return chart;
+  }
+
+  function schoolImage(school,kind) {
+    const original=schoolArt.querySelector('[data-school="'+school.id+'"][data-kind="'+kind+'"]');
+    const image=new Image();
+    image.alt=original.alt;
+    image.src=original.getAttribute("src");
+    return image;
+  }
+
+  function schoolResult(school,item,focus) {
+    const section=el("section","illustrated-result");
+    const poster=el("div","school-poster");
+    const crop=el("div","school-illustration");
+    crop.append(schoolImage(school,"result"));
+    const heading=el("h1","sr-only",school.title);
+    const verdict=el("div","school-verdict");
+    verdict.append(el("h2","sr-only","学院判词"),el("p","",school.reason));
+    poster.append(heading,crop,verdict);
+    const panel=el("div","school-tools");
+    const actions=el("div","panel-actions");
+    const claim=el("a","action","领取学生证");
+    claim.href="#card";
+    actions.append(claim);
+    panel.append(actions);
+    if (previewSchool) {
+      const others = illustratedSchools.filter(entry=>entry.id!==school.id);
+      panel.append(el("p","school-mode","学院预览 · 本次不计入校友人数"));
+      const nav=el("div","school-links");
+      nav.append(btn(session && session.phase==="question" ? "继续答题" : "从第一题试玩","quiet",() => {
+        if (session?.phase==="question") { history.replaceState(null,"","#play"); continueRun(); }
+        else start();
+      }));
+      for (const other of others) nav.append(schoolLink(other,"看"+other.title));
+      panel.append(nav);
+    } else {
+      const notice=el("div","alumni");
+      panel.append(notice);
+      window.QuizCounts?.attach(notice,item,session.answers);
+    }
+    if (item) {
+      const scores=el("details","school-scores");
+      scores.append(el("summary","","我的九维得分"),scoreList(item));
+      panel.append(scores,btn("修改答案","quiet",() => {
+        history.replaceState(null,"","#play");
+        session.index=quiz.main.length-1;session.phase="question";save();question();
+      }));
+    }
+    if (!previewSchool) panel.append(btn("再测一次","quiet",start));
+    section.append(poster,panel);
+    mount("school",section,focus);
+  }
+
+  function wrapText(ctx,text,width) {
+    const lines=[];
+    for (const para of text.replace(/\r\n?/g,"\n").split("\n")) {
+      let line="";
+      for (const ch of para) {
+        if (line && ctx.measureText(line+ch).width>width) {lines.push(line);line="";}
+        line+=ch;
+      }
+      lines.push(line);
+    }
+    return lines;
+  }
+
+  async function studentCardPNG(image,reason) {
+    await image.decode();
+    const canvas=document.createElement("canvas");
+    canvas.width=1080;
+    const ctx=canvas.getContext("2d");
+    const font='500 34px "Microsoft YaHei","PingFang SC",sans-serif';
+    ctx.font=font;
+    const lines=reason.trim() ? wrapText(ctx,reason,618) : [];
+    const extra=Math.max(0,lines.length-3)*47;
+    canvas.height=1440+extra;
+    // Leave the QR and its entire quiet zone at the original resolution.
+    ctx.drawImage(image,0,0);
+    if (extra) {
+      // Stretch a clean horizontal strip below the entire QR and its caption.
+      ctx.drawImage(image,0,1384,1080,1,0,1385,1080,extra);
+      ctx.drawImage(image,0,1385,1080,55,0,1385+extra,1080,55);
+    }
+    if (lines.length) {
+      ctx.drawImage(image,82,1206,643,1,82,1207,643,152+extra);
+      ctx.fillStyle="#102c73";
+      ctx.font=font;
+      ctx.textBaseline="top";
+      lines.forEach((line,i)=>ctx.fillText(line,91,1215+i*47));
+    }
+    return canvas.toDataURL("image/png");
+  }
+
+  function studentCard(school,focus=true) {
+    const section=el("section","student-card");
+    const heading=el("h1","sr-only",school.title+"学生证");
+    const image=schoolImage(school,"card");
+    image.className="student-id";
+    const panel=el("div","school-tools");
+    const status=el("p","school-mode","长按学生证图片也可以保存。");
+    status.setAttribute("role","status");
+    const actions=el("div","panel-actions");
+    const download=el("a","action","保存学生证");
+    download.download=school.title+"-学生证.png";
+    const back=el("a","quiet","返回分院结果");
+    back.href="#result";
+    actions.append(download,back);
+    panel.append(actions,status);
+    section.append(heading,image,panel);
+    mount("card",section,focus);
+    studentCardPNG(image,school.reason || "").then(url=>{
+      image.src=url;
+      download.href=url;
+      if (school.reason) image.alt=school.title+"学生证。学院判词："+school.reason;
+    }).catch(()=>{
+      if (!school.reason && image.naturalWidth) {
+        download.href=image.src;
+        download.download=school.title+"-学生证.webp";
+      } else {
+        image.hidden=true;
+        download.hidden=true;
+        status.textContent="学生证图片暂时无法生成。";
+        actions.prepend(btn("重试","action",()=>studentCard(school)));
+      }
+    });
   }
 
   async function drawCard(item) {
@@ -298,7 +464,7 @@
     ctx.fillStyle="white";ctx.font="700 27px "+type;
     ctx.fillText("我的九维得分",58,bodyBottom+59);
     ctx.textAlign="right";ctx.font="24px "+type;
-    ctx.fillText("每项 2–6 分",783,bodyBottom+59);
+    ctx.fillText("得分 / 满分 · 档位",783,bodyBottom+59);
     ctx.fillStyle="#fbfaef";ctx.fillRect(36,gridTop,768,gridBottom-gridTop);
     for (const [column,module] of quiz.modules.entries()) {
       const left=36+256*column;
@@ -312,7 +478,7 @@
         ctx.textAlign="left";ctx.fillStyle="#142c52";ctx.font="24px "+type;
         ctx.fillText(quiz.axes[axis].label,left+19,baseline);
         ctx.textAlign="right";ctx.font="700 24px "+type;
-        ctx.fillText(item.scores[axis]+" · "+levelNames[item.levels[axis]],left+237,baseline);
+        ctx.fillText(scoreLabel(item,axis),left+237,baseline);
       }
     }
     ctx.textAlign="left";ctx.fillStyle="white";ctx.font="700 37px "+type;
@@ -347,9 +513,28 @@
     });
     return {saveCard,preview};
   }
-  document.querySelector(".monogram").addEventListener("click",event => {event.preventDefault();home();});
-  if (location.hash==="#home") {
-    home(false);
-    try { history.replaceState(null,"",location.href.split("#")[0]); } catch {}
-  } else continueRun(false);
+  function route(focus=true) {
+    const hash=location.hash;
+    if (hash==="#home") return home(focus);
+    if (hash==="#card") {
+      const matched=session && quiz.getState(session.answers).result;
+      const school=previewSchool || illustratedSchools.find(entry => entry.id===matched?.id);
+      if (school) return studentCard(school,focus);
+    }
+    if (previewSchool) {
+      if (hash==="#play") {
+        if (!session || session.phase==="result") return start();
+        return continueRun(focus);
+      }
+      return result(focus);
+    }
+    continueRun(focus);
+  }
+  document.querySelector(".monogram").addEventListener("click",event => {
+    event.preventDefault();
+    history.replaceState(null,"","#home");
+    home();
+  });
+  window.addEventListener("hashchange",()=>route());
+  route(false);
 })();
