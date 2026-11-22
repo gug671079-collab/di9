@@ -215,7 +215,7 @@
     const head=el("div","result-head");
     const block=el("div","result-copy");
     block.append(el("p","home-kicker",item.id ? "你被分到了" : "分院结果预览"),
-      el("h1","",item.title || "学院名称待填"));
+      el("h1","",item.title || "我的试玩结果"));
     if (item.reason) block.append(el("p","reason",item.reason));
     const figure=el("div","result-art");figure.append(art("idle"));
     head.append(block,figure);
@@ -270,10 +270,12 @@
     }
     const titleFont="900 67px "+type;
     const reasonFont="31px "+type;
-    const titles=lines(item.title || "学院名称待填",titleFont,716);
+    const titles=lines(item.title || "我的试玩结果",titleFont,716);
     const reasons=item.reason ? lines(item.reason,reasonFont,716) : [];
     const bodyBottom=656+titles.length*80+reasons.length*48;
-    c.height=bodyBottom+(quiz.ready?305:160);
+    const gridTop=bodyBottom+84;
+    const gridBottom=gridTop+242;
+    c.height=gridBottom+290;
     ctx.fillStyle="#1046c6";ctx.fillRect(0,0,c.width,c.height);
     ctx.fillStyle="#d8ecff";ctx.fillRect(36,108,768,430);
     ctx.fillStyle="#c9d910";
@@ -295,16 +297,29 @@
     ctx.fillStyle="#9db9ef";ctx.fillRect(57,bodyBottom+2,726,2);
     ctx.fillStyle="white";ctx.font="700 27px "+type;
     ctx.fillText("我的九维得分",58,bodyBottom+59);
-    ctx.font="24px "+type;
-    const rows=quiz.modules.map(m=>m.label+"　"+m.axes.map(axis=>item.scores[axis]).join(" / "));
-    if (quiz.ready) {
-      rows.forEach((s,i)=>ctx.fillText(s,58,bodyBottom+111+i*44));
-      window.QuizQR.draw(ctx,theme || "home",585,bodyBottom+25,206);
-      ctx.fillText("扫码参与分院",604,bodyBottom+264);
-    } else {
-      ctx.font="21px "+type;
-      rows.forEach((s,i)=>ctx.fillText(s,58+i*247,bodyBottom+110,224));
+    ctx.textAlign="right";ctx.font="24px "+type;
+    ctx.fillText("每项 2–6 分",783,bodyBottom+59);
+    ctx.fillStyle="#fbfaef";ctx.fillRect(36,gridTop,768,gridBottom-gridTop);
+    for (const [column,module] of quiz.modules.entries()) {
+      const left=36+256*column;
+      if (column>0) {
+        ctx.fillStyle="#d4dcd6";ctx.fillRect(left,gridTop+20,2,202);
+      }
+      ctx.textAlign="left";ctx.fillStyle="#1046c6";ctx.font="800 28px "+type;
+      ctx.fillText(module.label,left+19,gridTop+47);
+      for (const [row,axis] of module.axes.entries()) {
+        const baseline=gridTop+101+row*51;
+        ctx.textAlign="left";ctx.fillStyle="#142c52";ctx.font="24px "+type;
+        ctx.fillText(quiz.axes[axis].label,left+19,baseline);
+        ctx.textAlign="right";ctx.font="700 24px "+type;
+        ctx.fillText(item.scores[axis]+" · "+levelNames[item.levels[axis]],left+237,baseline);
+      }
     }
+    ctx.textAlign="left";ctx.fillStyle="white";ctx.font="700 37px "+type;
+    ctx.fillText(title,57,gridBottom+128);
+    ctx.fillStyle="#e1f464";ctx.font="26px "+type;
+    ctx.fillText(item.id ? "扫码参与分院" : "扫码试玩",58,gridBottom+176);
+    window.QuizQR.draw(ctx,theme || "home",548,gridBottom+16,250);
     return c.toDataURL("image/png");
   }
   function cardActions(item,status) {
