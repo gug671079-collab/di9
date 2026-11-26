@@ -233,6 +233,7 @@
     }
     panel.append(header,heading);
     if (q.stemImage) {
+      choices.classList.add("seat-choices");
       const map = el("div","seat-map");
       const image = new Image(1536,1024);
       image.src = q.stemImage;
@@ -241,7 +242,7 @@
       // Seat centers in the approved 1536 × 1024 illustration.
       [[659,310],[910,687],[1318,461]].forEach(([x,y],i) => {
         const seat = btn("","seat-target",event => choose(i,event));
-        seat.setAttribute("aria-label",labels[i]+"："+q.options[i]);
+        seat.setAttribute("aria-label",labels[i]);
         seat.style.left = (x/1536*100)+"%";
         seat.style.top = (y/1024*100)+"%";
         map.append(seat);
@@ -260,6 +261,8 @@
         image.src = q.optionImages[i];
         image.alt = labels[i]+"："+option;
         choice.append(image);
+      } else if (q.stemImage) {
+        choice.textContent = labels[i];
       } else {
         choice.append(el("b","letter",labels[i]),el("span","",hasCopy ? option : "选项 "+labels[i]));
       }
@@ -419,14 +422,6 @@
         else start();
       }));
     } else nav.append(btn("再测一次","quiet",start));
-    if (verdict?.author && verdict.source) {
-      const source = el("a","quiet","查看引文出处");
-      source.href = verdict.source;
-      source.target = "_blank";
-      source.rel = "noopener noreferrer";
-      source.setAttribute("aria-label","查看" + school.title + "引文出处（在新窗口打开）");
-      nav.append(source);
-    }
     tools.append(nav);
     mount("school",section,focus);
     loadStudentID();
@@ -537,37 +532,39 @@
     ctx.fillRect(60, 1144, 960, 3);
     // The academy seal uses its assigned cloud expression.
     ctx.beginPath();
-    ctx.arc(143, 1268, 77, 0, 2 * Math.PI);
+    ctx.arc(104, 1268, 44, 0, 2 * Math.PI);
     ctx.strokeStyle = ink;
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 3;
     ctx.stroke();
     ctx.beginPath();
-    ctx.arc(143, 1268, 66, 0, 2 * Math.PI);
+    ctx.arc(104, 1268, 37, 0, 2 * Math.PI);
     ctx.fillStyle = ink;
     ctx.fill();
-    const faceScale = Math.min(116 / face.naturalWidth, 106 / face.naturalHeight);
+    const faceScale = Math.min(66 / face.naturalWidth, 60 / face.naturalHeight);
     const faceWidth = face.naturalWidth * faceScale;
     const faceHeight = face.naturalHeight * faceScale;
-    ctx.drawImage(face, 143 - faceWidth / 2, 1268 - faceHeight / 2, faceWidth, faceHeight);
+    ctx.drawImage(face, 104 - faceWidth / 2, 1268 - faceHeight / 2, faceWidth, faceHeight);
     ctx.fillStyle = ink;
     if (item.verdict) {
-      const left = 240, width = 563, lineHeight = 49;
-      ctx.font = "600 35px " + sans;
+      const left = 168, width = 428, lineHeight = 43;
+      ctx.font = "600 32px " + sans;
       const lines = cardTextLines(ctx, item.verdict.text, width);
       const author = item.verdict.author;
       const firstBaseline = 1281 - ((lines.length - 1) * lineHeight + (author ? 45 : 0)) / 2;
       lines.forEach((line, index) => ctx.fillText(line, left, firstBaseline + index * lineHeight));
       if (author) {
-        ctx.font = "500 30px " + sans;
+        ctx.font = "500 27px " + sans;
         ctx.fillText("——" + author, left, firstBaseline + (lines.length - 1) * lineHeight + 45, width);
       }
     } else {
       ctx.font = "bold 42px " + sans;
-      ctx.fillText(title, 253, 1281);
+      ctx.fillText(title, 168, 1281);
     }
+    window.QuizQR.draw(ctx, "nice", 615, 1156, 196);
     window.QuizQR.draw(ctx, "home", 823, 1156, 196);
     ctx.textAlign = "center";
     ctx.font = "bold 24px " + sans;
+    ctx.fillText("NICE老师", 713, 1378);
     ctx.fillText("扫码参与分院", 921, 1378);
     return canvas.toDataURL("image/png");
   }

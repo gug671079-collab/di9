@@ -103,6 +103,8 @@ body[data-screen=home] main { width:100%; max-width:none; }
 .seat-map img { display:block; width:100%; height:auto; }
 .seat-target { position:absolute; transform:translate(-50%,-50%); width:max(44px,4%); height:max(44px,5%); padding:0; border:0; background:transparent; }
 .seat-target:focus-visible { border-radius:3px; }
+.seat-choices { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.seat-choices .answer { justify-content:center; font:700 17px/1 Consolas,monospace; }
 .image-options { grid-template-columns:repeat(3,minmax(0,1fr)); gap:clamp(5px,1vw,12px); }
 .image-options .answer { display:block; overflow:hidden; padding:0; background:white; }
 .image-options .answer img { display:block; width:100%; height:auto; }
