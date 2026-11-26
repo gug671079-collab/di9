@@ -474,16 +474,26 @@
     const [mainName,qualifier]=schoolTitleParts(item.title || "试玩完成");
     const footerTop=865;
     ctx.fillStyle="#1046c6";ctx.fillRect(0,0,c.width,c.height);
-    ctx.fillStyle="#d8ecff";ctx.fillRect(36,108,768,560);
-    ctx.fillStyle="#c9d910";
-    ctx.beginPath();ctx.moveTo(116,203);ctx.lineTo(452,203);ctx.lineTo(574,383);
-    ctx.lineTo(452,573);ctx.lineTo(116,573);ctx.closePath();
-    ctx.moveTo(191,266);ctx.lineTo(191,510);ctx.lineTo(414,510);ctx.lineTo(498,383);ctx.lineTo(414,266);ctx.closePath();ctx.fill("evenodd");
-    const hat=art(item.face ? "face-"+item.face : "idle");
-    await hat.decode();
-    const scale=Math.min(738/hat.naturalWidth,552/hat.naturalHeight);
-    const hw=hat.naturalWidth*scale, hh=hat.naturalHeight*scale;
-    ctx.drawImage(hat,420-hw/2,388-hh/2,hw,hh);
+    if (trialEdition && item.id) {
+      if (!item.poster) throw new Error("Missing school poster.");
+      const poster = new Image();
+      poster.src = item.poster;
+      await poster.decode();
+      const cover = Math.max(768 / poster.naturalWidth, 560 / poster.naturalHeight);
+      const sw = 768 / cover, sh = 560 / cover;
+      ctx.drawImage(poster, (poster.naturalWidth - sw) / 2, (poster.naturalHeight - sh) / 2, sw, sh, 36, 108, 768, 560);
+    } else {
+      ctx.fillStyle="#d8ecff";ctx.fillRect(36,108,768,560);
+      ctx.fillStyle="#c9d910";
+      ctx.beginPath();ctx.moveTo(116,203);ctx.lineTo(452,203);ctx.lineTo(574,383);
+      ctx.lineTo(452,573);ctx.lineTo(116,573);ctx.closePath();
+      ctx.moveTo(191,266);ctx.lineTo(191,510);ctx.lineTo(414,510);ctx.lineTo(498,383);ctx.lineTo(414,266);ctx.closePath();ctx.fill("evenodd");
+      const hat=art(item.face ? "face-"+item.face : "idle");
+      await hat.decode();
+      const scale=Math.min(738/hat.naturalWidth,552/hat.naturalHeight);
+      const hw=hat.naturalWidth*scale, hh=hat.naturalHeight*scale;
+      ctx.drawImage(hat,420-hw/2,388-hh/2,hw,hh);
+    }
     ctx.fillStyle="white";ctx.font="800 37px "+type;ctx.fillText("D&I",50,72);
     ctx.textAlign="right";ctx.font="24px "+type;ctx.fillText("第九届设创双年晚会",788,73);ctx.textAlign="left";
     ctx.fillStyle="white";ctx.font=titleFont;
@@ -509,8 +519,8 @@
       try {
         drawing ??= drawCard(item);
         const url=await drawing;
-        image.src=url;image.hidden=false;return url;
-      } catch {drawing=null;status.textContent="图片生成失败，可重试或截屏保存。";return null;}
+        image.src=url;image.hidden=false;status.textContent="";return url;
+      } catch {drawing=null;status.textContent="结果卡暂时无法生成，请点「保存结果卡」重试。";return null;}
     }
     preview.addEventListener("toggle",() => {if (preview.open) load();});
     const saveCard=btn("保存结果卡","action",async () => {
