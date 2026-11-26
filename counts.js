@@ -76,18 +76,18 @@
     notice.setAttribute("role", "status");
     panel.append(notice);
     if (!window.CloudQuiz.ready || !item?.id) {
-      notice.textContent = "试玩模式 · 校友统计暂未开放";
+      notice.textContent = "试玩模式 · 院友统计暂未开放";
       return;
     }
     if (location.protocol === "file:" || document.documentElement.hasAttribute("data-portable")) {
-      notice.textContent = "离线试玩 · 校友统计暂未开放";
+      notice.textContent = "离线试玩 · 院友统计暂未开放";
       return;
     }
 
     const submitted = [...answers];
     let body;
     async function submit() {
-      notice.textContent = "正在读取校友人数…";
+      notice.textContent = "正在读取院友人数…";
       if (!body) {
         try {
           const {browserId, revision, bankRevision, expectedId} = await prepareSeat(item.id, submitted.join(","));
@@ -114,12 +114,12 @@
         if (!response.ok) throw new Error("Unavailable statistics");
         const data = await response.json();
         if (data.mode === "rehearsal") {
-          notice.textContent = "试玩模式 · 校友统计暂未开放";
+          notice.textContent = "院友统计暂未开放";
         } else if (data.mode === "live" && data.id === item.id && Number.isSafeInteger(data.peers) && data.peers >= 0) {
-          notice.textContent = "你的校友已有 " + data.peers + " 人";
+          notice.textContent = data.peers === 0 ? "你是本院目前唯一的成员。" : "已有 " + data.peers + " 位院友和你同院。";
         } else { throw new Error("Invalid alumni count"); }
       } catch {
-        notice.textContent = "暂时读不到校友人数。";
+        notice.textContent = "暂时读不到院友人数。";
         const retry = document.createElement("button");
         retry.type = "button";
         retry.className = "quiet";

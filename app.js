@@ -9,11 +9,13 @@
   const illustratedSchools = quiz.schools.filter(school =>
     school.id && Array.from(schoolArt.querySelectorAll('[data-kind="card"]')).some(img => img.dataset.school === school.id));
   const params = new URLSearchParams(location.search);
+  const liveCounts = document.documentElement.hasAttribute("data-live-counts");
   const previewSchools = quiz.schools.filter(school => school.poster || illustratedSchools.includes(school));
   const previewSchool = previewSchools.find(school => school.id === params.get("preview"));
   const trialEdition = quiz.edition === "trial";
   const pagesTrial = document.documentElement.hasAttribute("data-pages-trial");
-  const sessionKey = "mdi:sorting-hat:quiz:1" + (trialEdition ? ":trial" : "") + (previewSchool ? ":preview:" + previewSchool.id : "");
+  const editionKey = liveCounts ? ":event" : trialEdition ? ":trial" : "";
+  const sessionKey = "mdi:sorting-hat:quiz:1" + editionKey + (previewSchool ? ":preview:" + previewSchool.id : "");
   const reviewKey = quiz.edition ? "mdi:local-review:" + sessionKey : null;
   const title = "设创分院帽";
   const motionPreference = matchMedia("(prefers-reduced-motion: reduce)");
@@ -127,7 +129,7 @@
     }
   }
   function start(focus = true) {
-    if (!previewSchool && !trialEdition) window.QuizCounts?.newRun();
+    if (!params.has("preview") && (liveCounts || !trialEdition)) window.QuizCounts?.newRun();
     enterPlay();
     session = {revision:quiz.revision, answers:[], index:0, phase:"question"};
     save();
@@ -367,6 +369,11 @@
     section.querySelector("h1").classList.add("sr-only");
     const image = el("img","student-id student-id-art");
     image.alt = school.title + "学生证";
+    const verdict = school.verdict;
+    if (verdict) {
+      image.alt += "。" + verdict.text;
+      if (verdict.author) image.alt += " ——" + verdict.author;
+    }
     image.hidden = true;
     section.querySelector(".admission-main").append(image);
     const actions = el("div","panel-actions");
@@ -392,7 +399,7 @@
     tools.append(actions,status);
     if (sample) {
       tools.append(el("p","school-mode","学院效果预览 · 本次不计入院友人数"));
-    } else if (trialEdition) {
+    } else if (trialEdition && !liveCounts) {
       tools.append(el("p","school-mode",pagesTrial ? "公开试玩 · 本次不计入校友人数" : "本地试填 · 本次不计入校友人数"));
     } else {
       const peers = el("div","alumni");
@@ -412,6 +419,14 @@
         else start();
       }));
     } else nav.append(btn("再测一次","quiet",start));
+    if (verdict?.author && verdict.source) {
+      const source = el("a","quiet","查看引文出处");
+      source.href = verdict.source;
+      source.target = "_blank";
+      source.rel = "noopener noreferrer";
+      source.setAttribute("aria-label","查看" + school.title + "引文出处（在新窗口打开）");
+      nav.append(source);
+    }
     tools.append(nav);
     mount("school",section,focus);
     loadStudentID();
@@ -428,6 +443,25 @@
     // Restore the paper in that rectangle using its clean adjacent strip.
     ctx.drawImage(image,730,1148,20,205,82,1148,643,205);
     return canvas.toDataURL("image/png");
+  }
+
+  function cardTextLines(ctx, text, maxWidth) {
+    const lines = [];
+    let line = "";
+    // Prefer a break between clauses. Keep closing punctuation with its character.
+    const clauses = text.match(/[^，。！？；：、]+[，。！？；：、]*|./gu) || [];
+    for (const clause of clauses) {
+      const parts = ctx.measureText(clause).width <= maxWidth ? [clause] : clause.match(/.[，。！？；：、]*/gu);
+      for (const part of parts) {
+        if (line && ctx.measureText(line + part).width > maxWidth) {
+          lines.push(line);
+          line = "";
+        }
+        line += part;
+      }
+    }
+    if (line) lines.push(line);
+    return lines;
   }
 
   async function drawCard(item) {
@@ -516,8 +550,21 @@
     const faceHeight = face.naturalHeight * faceScale;
     ctx.drawImage(face, 143 - faceWidth / 2, 1268 - faceHeight / 2, faceWidth, faceHeight);
     ctx.fillStyle = ink;
-    ctx.font = "bold 42px " + sans;
-    ctx.fillText(title, 253, 1281);
+    if (item.verdict) {
+      const left = 240, width = 563, lineHeight = 49;
+      ctx.font = "600 35px " + sans;
+      const lines = cardTextLines(ctx, item.verdict.text, width);
+      const author = item.verdict.author;
+      const firstBaseline = 1281 - ((lines.length - 1) * lineHeight + (author ? 45 : 0)) / 2;
+      lines.forEach((line, index) => ctx.fillText(line, left, firstBaseline + index * lineHeight));
+      if (author) {
+        ctx.font = "500 30px " + sans;
+        ctx.fillText("——" + author, left, firstBaseline + (lines.length - 1) * lineHeight + 45, width);
+      }
+    } else {
+      ctx.font = "bold 42px " + sans;
+      ctx.fillText(title, 253, 1281);
+    }
     window.QuizQR.draw(ctx, "home", 823, 1156, 196);
     ctx.textAlign = "center";
     ctx.font = "bold 24px " + sans;
