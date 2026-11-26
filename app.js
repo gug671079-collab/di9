@@ -294,11 +294,6 @@
   document.addEventListener("visibilitychange",restartIdle);
   window.addEventListener("pagehide",stopIdle);
   window.addEventListener("pageshow",restartIdle);
-  // Local art direction samples. Published verdicts come from the school's reason.
-  const sampleVerdicts = {
-    "school-01": "明早的汇报，留给睡醒的你。学院的沙发还空着一个位置，刚好够你躺下。",
-    "school-05": "从第一道折痕到最后一次试飞，这架飞机都是你自己做的。现在，把它掷出去吧。"
-  };
   function rehearsal() {
     return !quiz.ready || location.protocol === "file:" || document.documentElement.hasAttribute("data-portable");
   }
@@ -313,10 +308,17 @@
     if (session?.phase !== "result") return null;
     return quiz.schools.find(school => school.id === session.matchedId);
   }
+  function schoolTitleParts(name) {
+    const suffix = name.match(/（[^（）]+）$/u);
+    return suffix ? [name.slice(0,suffix.index),suffix[0]] : [name,""];
+  }
   function admission(name, text) {
     const section = el("section","admission");
     const intro = el("div","admission-main");
-    intro.append(el("h1","admission-name",name));
+    const [mainName,qualifier] = schoolTitleParts(name);
+    const heading = el("h1","admission-name",mainName);
+    if (qualifier) heading.append(el("span","admission-qualifier",qualifier));
+    intro.append(heading);
     if (text) intro.append(el("p","admission-copy",text));
     const tools = el("div","admission-tools");
     section.append(intro,tools);
@@ -326,7 +328,7 @@
     const school = selectedSchool();
     if (school) return schoolResult(school,focus);
     if (session?.phase !== "result") return home(focus);
-    if (rehearsal()) return schoolResult({title:"试玩完成",reason:"本次试玩已结束。"},focus);
+    if (rehearsal()) return schoolResult({title:"试玩完成"},focus);
 
     const loading = admission("正在分院","");
     mount("result",loading.section,focus);
@@ -367,8 +369,7 @@
 
   function schoolResult(school,focus,trialPreview = false) {
     const sample = trialPreview || Boolean(previewSchool) || rehearsal();
-    const reason = school.reason || (sample ? sampleVerdicts[school.id] : "");
-    const {section,tools} = admission(school.title,reason);
+    const {section,tools} = admission(school.title);
     if (school.face) {
       const hat = art("face-" + school.face);
       hat.className = "admission-hat";
@@ -423,43 +424,16 @@
     mount("school",section,focus);
   }
 
-  function wrapText(ctx,text,width) {
-    const lines=[];
-    for (const para of text.replace(/\r\n?/g,"\n").split("\n")) {
-      let line="";
-      for (const ch of para) {
-        if (line && ctx.measureText(line+ch).width>width) {lines.push(line);line="";}
-        line+=ch;
-      }
-      lines.push(line);
-    }
-    return lines;
-  }
-
-  async function studentCardPNG(image,reason) {
+  async function studentCardPNG(image) {
     await image.decode();
     const canvas=document.createElement("canvas");
-    canvas.width=1080;
+    canvas.width=image.naturalWidth;
+    canvas.height=image.naturalHeight;
     const ctx=canvas.getContext("2d");
-    const font='500 34px "Microsoft YaHei","PingFang SC",sans-serif';
-    ctx.font=font;
-    const lines=reason.trim() ? wrapText(ctx,reason,618) : [];
-    const extra=Math.max(0,lines.length-3)*47;
-    canvas.height=1440+extra;
-    // Leave the QR and its entire quiet zone at the original resolution.
     ctx.drawImage(image,0,0);
-    if (extra) {
-      // Stretch a clean horizontal strip below the entire QR and its caption.
-      ctx.drawImage(image,0,1384,1080,1,0,1385,1080,extra);
-      ctx.drawImage(image,0,1385,1080,55,0,1385+extra,1080,55);
-    }
-    if (lines.length) {
-      ctx.drawImage(image,82,1206,643,1,82,1207,643,152+extra);
-      ctx.fillStyle="#102c73";
-      ctx.font=font;
-      ctx.textBaseline="top";
-      lines.forEach((line,i)=>ctx.fillText(line,91,1215+i*47));
-    }
+    // Both original illustrations have a printed verdict label and rules left of the QR.
+    // Restore the paper in that rectangle using its clean adjacent strip.
+    ctx.drawImage(image,730,1148,20,205,82,1148,643,205);
     return canvas.toDataURL("image/png");
   }
 
@@ -468,11 +442,13 @@
     const heading=el("h1","sr-only",school.title+"学生证");
     const image=schoolImage(school,"card");
     image.className="student-id";
+    image.hidden=true;
     const panel=el("div","school-tools");
     const status=el("p","school-mode","长按学生证图片也可以保存。");
     status.setAttribute("role","status");
     const actions=el("div","panel-actions");
     const download=el("a","action","保存学生证");
+    download.hidden=true;
     download.download=school.title+"-学生证.png";
     const back=el("a","quiet","返回分院结果");
     back.href=trialPreview ? "#preview-result/"+school.id : "#result";
@@ -480,55 +456,45 @@
     panel.append(actions,status);
     section.append(heading,image,panel);
     mount("card",section,focus);
-    studentCardPNG(image,school.reason || "").then(url=>{
+    studentCardPNG(image).then(url=>{
       image.src=url;
+      image.hidden=false;
       download.href=url;
-      if (school.reason) image.alt=school.title+"学生证。学院判词："+school.reason;
+      download.hidden=false;
     }).catch(()=>{
-      if (!school.reason && image.naturalWidth) {
-        download.href=image.src;
-        download.download=school.title+"-学生证.webp";
-      } else {
-        image.hidden=true;
-        download.hidden=true;
-        status.textContent="学生证图片暂时无法生成。";
-        actions.prepend(btn("重试","action",()=>studentCard(school,true,trialPreview)));
-      }
+      status.textContent="学生证图片暂时无法生成。";
+      actions.prepend(btn("重试","action",()=>studentCard(school,true,trialPreview)));
     });
   }
 
   async function drawCard(item) {
     const c=document.createElement("canvas");
     c.width=840;
+    c.height=1160;
     const ctx=c.getContext("2d");
     const type='"Microsoft YaHei","PingFang SC",sans-serif';
     const titleFont="900 67px "+type;
-    const reasonFont="31px "+type;
-    ctx.font=titleFont;
-    const titles=wrapText(ctx,item.title || "试玩完成",716);
-    ctx.font=reasonFont;
-    const reasons=item.reason ? wrapText(ctx,item.reason,716) : [];
-    const footerTop=656+titles.length*80+reasons.length*48;
-    c.height=footerTop+298;
+    const [mainName,qualifier]=schoolTitleParts(item.title || "试玩完成");
+    const footerTop=865;
     ctx.fillStyle="#1046c6";ctx.fillRect(0,0,c.width,c.height);
-    ctx.fillStyle="#d8ecff";ctx.fillRect(36,108,768,430);
+    ctx.fillStyle="#d8ecff";ctx.fillRect(36,108,768,560);
     ctx.fillStyle="#c9d910";
-    ctx.beginPath();ctx.moveTo(116,142);ctx.lineTo(452,142);ctx.lineTo(574,322);
-    ctx.lineTo(452,512);ctx.lineTo(116,512);ctx.closePath();
-    ctx.moveTo(191,205);ctx.lineTo(191,449);ctx.lineTo(414,449);ctx.lineTo(498,322);ctx.lineTo(414,205);ctx.closePath();ctx.fill("evenodd");
+    ctx.beginPath();ctx.moveTo(116,203);ctx.lineTo(452,203);ctx.lineTo(574,383);
+    ctx.lineTo(452,573);ctx.lineTo(116,573);ctx.closePath();
+    ctx.moveTo(191,266);ctx.lineTo(191,510);ctx.lineTo(414,510);ctx.lineTo(498,383);ctx.lineTo(414,266);ctx.closePath();ctx.fill("evenodd");
     const hat=art(item.face ? "face-"+item.face : "idle");
     await hat.decode();
-    const scale=Math.min(540/hat.naturalWidth,400/hat.naturalHeight);
+    const scale=Math.min(738/hat.naturalWidth,552/hat.naturalHeight);
     const hw=hat.naturalWidth*scale, hh=hat.naturalHeight*scale;
-    ctx.drawImage(hat,425-hw/2,322-hh/2,hw,hh);
+    ctx.drawImage(hat,420-hw/2,388-hh/2,hw,hh);
     ctx.fillStyle="white";ctx.font="800 37px "+type;ctx.fillText("D&I",50,72);
     ctx.textAlign="right";ctx.font="24px "+type;ctx.fillText("第九届设创双年晚会",788,73);ctx.textAlign="left";
-    ctx.fillStyle="#e1f464";ctx.font="700 27px "+type;
-    ctx.fillText(item.id ? "我的分院" : "分院结果预览",58,608);
     ctx.fillStyle="white";ctx.font=titleFont;
-    titles.forEach((line,i)=>ctx.fillText(line,56,696+i*80));
-    ctx.font=reasonFont;
-    reasons.forEach((line,i)=>ctx.fillText(line,59,686+titles.length*80+i*48));
+    ctx.fillText(mainName,56,755,716);
+    if (qualifier) {
+      ctx.font="700 39px "+type;
+      ctx.fillText(qualifier,56,821,716);
+    }
     ctx.fillStyle="#9db9ef";ctx.fillRect(57,footerTop,726,2);
     ctx.textAlign="left";ctx.fillStyle="white";ctx.font="700 37px "+type;
     ctx.fillText(title,57,footerTop+131);

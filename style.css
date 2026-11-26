@@ -121,7 +121,6 @@ body[data-screen=home] main { width:100%; max-width:none; }
 .question-panel .action:disabled { background: #d7dce1; color: #596579; }
 .quiet, .card-preview summary { display: inline-flex; align-items: center; min-height: 42px; padding: 6px 0; border: 0; background: transparent; color: inherit; font-weight: 650; font-size: 14px; text-decoration: underline; text-underline-offset: .3em; }
 .quiet:hover, .card-preview summary:hover { text-decoration-thickness: 2px; }
-/* The reveal gives the name the first beat, then brings in the verdict. */
 body:is([data-screen=school],[data-screen=result],[data-screen=card]) :is(.mast,footer) { display:none; }
 body:is([data-screen=school],[data-screen=result],[data-screen=card]) main { width:100%; max-width:none; }
 .admission {
@@ -131,32 +130,36 @@ body:is([data-screen=school],[data-screen=result],[data-screen=card]) main { wid
   width:100%;
   min-height:100svh;
   margin-inline:auto;
-  padding:clamp(36px,10svh,116px) max(18px,5vw) max(21px,env(safe-area-inset-bottom));
+  padding:clamp(14px,5svh,54px) max(16px,5vw) max(18px,env(safe-area-inset-bottom));
   color:var(--white);
   text-align:center;
 }
-.admission-main { align-self:center; min-width:0; padding-block:clamp(24px,4svh,68px); }
+.admission-main { align-self:center; min-width:0; padding-block:clamp(10px,2svh,24px); }
 .admission-hat {
   display:block;
-  width:clamp(116px,19svh,184px);
+  width:min(74vw,40svh,430px);
   height:auto;
-  margin:0 auto clamp(15px,2.7svh,30px);
-}
-@media (max-height:520px) {
-  .admission-main:has(.admission-hat) { padding-block:8px; }
-  .admission-hat { width:65px; margin-bottom:8px; }
+  margin:0 auto clamp(9px,2svh,24px);
 }
 .admission-name {
   max-width:100%;
   margin-inline:auto;
   font-family:"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif;
   font-weight:900;
-  font-size:clamp(38px,min(12.6vw,19svh),156px);
-  line-height:1.13;
+  font-size:clamp(29px,min(12vw,8.8svh),84px);
+  line-height:1.12;
   letter-spacing:-.045em;
   text-wrap:balance;
   overflow-wrap:anywhere;
   animation:announce-name 420ms cubic-bezier(.16,1,.26,1) both;
+}
+.admission-main:has(.admission-hat) .admission-name { min-height:1.78em; }
+.admission-qualifier {
+  display:block;
+  margin-top:.22em;
+  font-size:.45em;
+  line-height:1.16;
+  letter-spacing:0;
 }
 .admission-copy {
   width:min(100%,26em);
@@ -171,6 +174,13 @@ body:is([data-screen=school],[data-screen=result],[data-screen=card]) main { wid
   animation:announce-copy 340ms 150ms ease-out both;
 }
 .admission-tools { width:min(100%,42rem); min-width:0; margin-inline:auto; }
+/* Both student IDs and downloadable result cards share the same control positions. */
+.admission:has(.admission-hat) .admission-tools { display:grid; grid-template-rows:auto minmax(42px,auto) auto auto auto; }
+.admission-tools .panel-actions { grid-row:1; }
+.admission-tools .card-preview { grid-row:2; margin-top:0; }
+.admission-tools .hint { grid-row:3; }
+.admission-tools :is(.school-mode,.alumni) { grid-row:4; }
+.admission-tools .school-links { grid-row:5; }
 .admission-tools .panel-actions,.admission-tools .school-links { justify-content:center; margin:0; gap:4px 18px; }
 .admission-tools .quiet,.admission-tools summary { color:#ecf0ff; font-weight:500; }
 .admission-tools .action { min-height:44px; padding:10px 20px; font-size:15px; }
@@ -196,7 +206,7 @@ body:is([data-screen=school],[data-screen=result],[data-screen=card]) main { wid
 .student-id { display:block; width:100%; height:auto; }
 .school-tools { min-width:0; }
 .school-tools .panel-actions { margin:0; align-items:center; }
-.school-tools .action:not([href]) { opacity:.5; pointer-events:none; }
+.school-tools a.action:not([href]) { opacity:.5; pointer-events:none; }
 .school-mode,.school-tools .result-count { margin:12px 0 0; color:#f0f4ff; font-size:14px; }
 .student-id { max-width:460px; }
 @media (max-width:650px) {
