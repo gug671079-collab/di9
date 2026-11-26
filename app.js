@@ -232,6 +232,9 @@
       }));
     }
     panel.append(header,heading);
+    if (q.stemImage || q.optionImages?.length) {
+      panel.append(el("p","question-image-tip","图片没加载出来请稍等"));
+    }
     if (q.stemImage) {
       choices.classList.add("seat-choices");
       const map = el("div","seat-map");
