@@ -47,16 +47,9 @@
     x.src = location.protocol === "file:" && ref.dataset.fileSrc ? ref.dataset.fileSrc : ref.getAttribute("src");
     return x;
   }
-  function setCloudIdle(active) {
-    if (mascot.dataset.cloudIdle === String(active)) return;
-    mascot.dataset.cloudIdle = String(active);
-    window.CloudBreeze?.setIdle(mascot,active);
-  }
   function stopIdle() {
     clearTimeout(idleTimer);
-    if (!mascot) return;
-    if (mascot.dataset.cloudIdle === "true") mascot.src = mainFace;
-    setCloudIdle(false);
+    if (mascot && mascot.getAttribute("src") !== mainFace) mascot.src = mainFace;
   }
   function restartIdle() {
     stopIdle();
@@ -64,7 +57,6 @@
     let step = 0;
     function advance() {
       if (!mascot || closeOpening || document.hidden || motionPreference.matches) return stopIdle();
-      setCloudIdle(true);
       const isAlternate = step % 2 === 0;
       const frame = idleFrames[Math.floor(step / 2)];
       mascot.src = isAlternate && frame.ready ? frame.image.src : mainFace;
@@ -90,8 +82,8 @@
       const saved = sessionStorage.getItem(sessionKey) || (reviewKey && localStorage.getItem(reviewKey));
       const value = JSON.parse(saved);
       if (!value || value.revision !== quiz.revision || !Array.isArray(value.answers)) return null;
-      if (value.answers.length > quiz.main.length || !value.answers.every(choice =>
-          Number.isInteger(choice) && choice >= 0 && choice < 3)) return null;
+      if (value.answers.length > quiz.main.length || !value.answers.every((choice,i) =>
+          Number.isInteger(choice) && choice >= 0 && choice < quiz.main[i].options.length)) return null;
       if (!["question", "reveal", "result"].includes(value.phase) ||
           !Number.isInteger(value.index) || value.index < 0 || value.index >= quiz.main.length ||
           value.index > value.answers.length || (value.phase !== "question" && value.answers.length !== quiz.main.length)) return null;
@@ -116,6 +108,7 @@
     main.replaceChildren(content);
     mascot = main.querySelector("[data-cloud-mascot]");
     mainFace = mascot?.getAttribute("src");
+    window.CloudBreeze?.setTarget(mascot || main.querySelector(".admission-hat"));
     restartIdle();
     window.scrollTo(0,0);
     if (focus) {
@@ -149,8 +142,10 @@
     const navTop = editionNav?.getBoundingClientRect().top;
     start(false);
     stopIdle();
+    window.CloudBreeze?.setTarget(null);
     closeOpening = opening.play({sheet,rect,editionNav,navTop,target:mascot,onClose(focus) {
       closeOpening = null;
+      if (view === "question") window.CloudBreeze?.setTarget(mascot);
       if (focus && view === "question") {
         const heading = main.querySelector("h1");
         heading.tabIndex = -1;
@@ -310,7 +305,7 @@
   function selectedSchool() {
     if (previewSchool) return previewSchool;
     if (pagesTrial && quiz.trialOutcomes && session?.phase === "result" && session.answers.length === quiz.main.length) {
-      const index = session.answers.reduce((offset, choice) => offset * 3 + choice, 0);
+      const index = session.answers.reduce((offset, choice, i) => offset * quiz.main[i].options.length + choice, 0);
       return quiz.schools[parseInt(quiz.trialOutcomes[index], 36)];
     }
     if (rehearsal() && (session?.phase === "result" || location.hash === "#result" || location.hash === "#card"))
