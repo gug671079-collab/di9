@@ -210,6 +210,9 @@
     const hasCopy = q.text.trim() && q.options.every(option => option.trim());
     const heading = el("h1","",hasCopy ? q.text : "题目待填");
     heading.id="prompt";
+    if (q.stemImage || q.optionImages?.length) {
+      heading.append(" ",el("span","question-image-tip","（图片没加载出来请稍等）"));
+    }
     const choices = el("div","scale");
     choices.setAttribute("role","group");
     choices.setAttribute("aria-labelledby","prompt");
@@ -232,9 +235,6 @@
       }));
     }
     panel.append(header,heading);
-    if (q.stemImage || q.optionImages?.length) {
-      panel.append(el("p","question-image-tip","图片没加载出来请稍等"));
-    }
     if (q.stemImage) {
       choices.classList.add("seat-choices");
       const map = el("div","seat-map");
