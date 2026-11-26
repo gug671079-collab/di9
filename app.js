@@ -9,7 +9,8 @@
   const illustratedSchools = quiz.schools.filter(school =>
     school.id && Array.from(schoolArt.querySelectorAll('[data-kind="card"]')).some(img => img.dataset.school === school.id));
   const params = new URLSearchParams(location.search);
-  const previewSchool = illustratedSchools.find(school => school.id === params.get("preview"));
+  const previewSchools = quiz.schools.filter(school => school.poster || illustratedSchools.includes(school));
+  const previewSchool = previewSchools.find(school => school.id === params.get("preview"));
   const trialEdition = quiz.edition === "trial";
   const pagesTrial = document.documentElement.hasAttribute("data-pages-trial");
   const sessionKey = "mdi:sorting-hat:quiz:1" + (trialEdition ? ":trial" : "") + (previewSchool ? ":preview:" + previewSchool.id : "");
@@ -104,11 +105,11 @@
     stopIdle();
     view = phase;
     document.body.dataset.screen = phase;
-    document.title = phase === "home" ? title : title + " · " + ({question:"答题",reveal:"分院揭晓",result:"我的分院结果",school:"分院结果",card:"我的学生证"})[phase];
+    document.title = phase === "home" ? title : title + " · " + ({question:"答题",reveal:"分院揭晓",result:"我的分院结果",school:"我的学生证"})[phase];
     main.replaceChildren(content);
     mascot = main.querySelector("[data-cloud-mascot]");
     mainFace = mascot?.getAttribute("src");
-    window.CloudBreeze?.setTarget(mascot || main.querySelector(".admission-hat"));
+    window.CloudBreeze?.setTarget(mascot);
     restartIdle();
     window.scrollTo(0,0);
     if (focus) {
@@ -159,14 +160,6 @@
     if (session.phase === "result") return result(focus);
     if (session.phase === "reveal") return finish(focus);
     question(focus);
-  }
-  function schoolLink(school, text = school.title) {
-    const link = el("a","quiet",text);
-    const url = new URL(location.href);
-    url.hash = "";
-    url.searchParams.set("preview",school.id);
-    link.href = url.href;
-    return link;
   }
   function home(focus = true) {
     const section = el("section","landing");
@@ -368,28 +361,37 @@
   }
 
   function schoolResult(school,focus,trialPreview = false) {
-    const sample = trialPreview || Boolean(previewSchool) || rehearsal();
+    const sample = trialPreview || params.has("preview") || rehearsal();
     const {section,tools} = admission(school.title);
-    if (school.face) {
-      const hat = art("face-" + school.face);
-      hat.className = "admission-hat";
-      hat.width = 812;
-      hat.height = 729;
-      section.querySelector(".admission-main").prepend(hat);
-    }
+    section.classList.add("student-id-result");
+    section.querySelector("h1").classList.add("sr-only");
+    const image = el("img","student-id student-id-art");
+    image.alt = school.title + "学生证";
+    image.hidden = true;
+    section.querySelector(".admission-main").append(image);
     const actions = el("div","panel-actions");
     const status = el("p","hint");
     status.setAttribute("role","status");
-    const card = cardActions(school,status);
-    actions.append(card.saveCard);
-    if (illustratedSchools.some(entry => entry.id === school.id)) {
-      const claim = el("a","quiet student-card-link","领取学生证");
-      claim.href = trialPreview ? "#preview-card/"+school.id : "#card";
-      actions.append(claim);
+    const download = el("a","action","保存我的学生证");
+    download.download = school.title + "-学生证.png";
+    async function loadStudentID() {
+      actions.replaceChildren();
+      status.textContent = "正在生成学生证…";
+      try {
+        const url = await drawCard(school);
+        image.src = url;
+        image.hidden = false;
+        download.href = url;
+        actions.append(download);
+        status.textContent = "";
+      } catch {
+        status.textContent = "学生证暂时未能生成。";
+        actions.append(btn("重新生成学生证","action",loadStudentID));
+      }
     }
-    tools.append(actions,card.preview,status);
+    tools.append(actions,status);
     if (sample) {
-      tools.append(el("p","school-mode","学院效果预览 · 本次不计入校友人数"));
+      tools.append(el("p","school-mode","学院效果预览 · 本次不计入院友人数"));
     } else if (trialEdition) {
       tools.append(el("p","school-mode",pagesTrial ? "公开试玩 · 本次不计入校友人数" : "本地试填 · 本次不计入校友人数"));
     } else {
@@ -410,15 +412,9 @@
         else start();
       }));
     } else nav.append(btn("再测一次","quiet",start));
-    if (sample) {
-      for (const other of illustratedSchools.filter(entry => entry.id !== school.id)) {
-        const link = schoolLink(other,"看"+other.title);
-        if (trialPreview) link.href = "#preview-result/"+other.id;
-        nav.append(link);
-      }
-    }
     tools.append(nav);
     mount("school",section,focus);
+    loadStudentID();
   }
 
   async function studentCardPNG(image) {
@@ -434,120 +430,113 @@
     return canvas.toDataURL("image/png");
   }
 
-  function studentCard(school,focus=true,trialPreview=false) {
-    const section=el("section","student-card");
-    const heading=el("h1","sr-only",school.title+"学生证");
-    const image=schoolImage(school,"card");
-    image.className="student-id";
-    image.hidden=true;
-    const panel=el("div","school-tools");
-    const status=el("p","school-mode","长按学生证图片也可以保存。");
-    status.setAttribute("role","status");
-    const actions=el("div","panel-actions");
-    const download=el("a","action","保存学生证");
-    download.hidden=true;
-    download.download=school.title+"-学生证.png";
-    const back=el("a","quiet","返回分院结果");
-    back.href=trialPreview ? "#preview-result/"+school.id : "#result";
-    actions.append(download,back);
-    panel.append(actions,status);
-    section.append(heading,image,panel);
-    mount("card",section,focus);
-    studentCardPNG(image).then(url=>{
-      image.src=url;
-      image.hidden=false;
-      download.href=url;
-      download.hidden=false;
-    }).catch(()=>{
-      status.textContent="学生证图片暂时无法生成。";
-      actions.prepend(btn("重试","action",()=>studentCard(school,true,trialPreview)));
-    });
-  }
-
   async function drawCard(item) {
-    const c=document.createElement("canvas");
-    c.width=840;
-    c.height=1160;
-    const ctx=c.getContext("2d");
-    const type='"Microsoft YaHei","PingFang SC",sans-serif';
-    const titleFont="900 67px "+type;
-    const [mainName,qualifier]=schoolTitleParts(item.title || "试玩完成");
-    const footerTop=865;
-    ctx.fillStyle="#1046c6";ctx.fillRect(0,0,c.width,c.height);
-    if (trialEdition && item.id) {
-      if (!item.poster) throw new Error("Missing school poster.");
-      const poster = new Image();
-      poster.src = item.poster;
-      await poster.decode();
-      const cover = Math.max(768 / poster.naturalWidth, 560 / poster.naturalHeight);
-      const sw = 768 / cover, sh = 560 / cover;
-      ctx.drawImage(poster, (poster.naturalWidth - sw) / 2, (poster.naturalHeight - sh) / 2, sw, sh, 36, 108, 768, 560);
-    } else {
-      ctx.fillStyle="#d8ecff";ctx.fillRect(36,108,768,560);
-      ctx.fillStyle="#c9d910";
-      ctx.beginPath();ctx.moveTo(116,203);ctx.lineTo(452,203);ctx.lineTo(574,383);
-      ctx.lineTo(452,573);ctx.lineTo(116,573);ctx.closePath();
-      ctx.moveTo(191,266);ctx.lineTo(191,510);ctx.lineTo(414,510);ctx.lineTo(498,383);ctx.lineTo(414,266);ctx.closePath();ctx.fill("evenodd");
-      const hat=art(item.face ? "face-"+item.face : "idle");
-      await hat.decode();
-      const scale=Math.min(738/hat.naturalWidth,552/hat.naturalHeight);
-      const hw=hat.naturalWidth*scale, hh=hat.naturalHeight*scale;
-      ctx.drawImage(hat,420-hw/2,388-hh/2,hw,hh);
+    if (!item.poster && illustratedSchools.some(school => school.id === item.id)) {
+      return studentCardPNG(schoolImage(item, "card"));
     }
-    ctx.fillStyle="white";ctx.font="800 37px "+type;ctx.fillText("D&I",50,72);
-    ctx.textAlign="right";ctx.font="24px "+type;ctx.fillText("第九届设创双年晚会",788,73);ctx.textAlign="left";
-    ctx.fillStyle="white";ctx.font=titleFont;
-    ctx.fillText(mainName,56,755,716);
+
+    const face = art(item.face ? "face-" + item.face : "idle");
+    const picture = item.poster ? new Image() : face;
+    if (item.poster) picture.src = item.poster;
+    await Promise.all([picture.decode(), face.decode()]);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 1080;
+    canvas.height = 1440;
+    const ctx = canvas.getContext("2d");
+    const ink = "#123480";
+    const paper = "#fffbee";
+    const lime = "#e6f426";
+    const sans = '"Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif';
+    const [schoolName, qualifier] = schoolTitleParts(item.title || "试玩完成");
+
+    ctx.fillStyle = "#143fbe";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.beginPath();
+    ctx.moveTo(32, 32);
+    ctx.lineTo(1012, 32);
+    ctx.lineTo(1048, 68);
+    ctx.lineTo(1048, 1372);
+    ctx.lineTo(1012, 1408);
+    ctx.lineTo(32, 1408);
+    ctx.closePath();
+    ctx.fillStyle = paper;
+    ctx.fill();
+
+    ctx.save();
+    ctx.clip();
+    ctx.fillStyle = lime;
+    ctx.fillRect(32, 32, 1016, 166);
+    ctx.fillStyle = ink;
+    ctx.fillRect(32, 195, 1016, 3);
+    ctx.font = "italic 900 92px Arial, sans-serif";
+    ctx.fillText("D&I", 60, 126);
+    ctx.font = "bold 27px " + sans;
+    ctx.fillText("第九届设创双年晚会", 65, 170);
+    ctx.textAlign = "right";
+    ctx.font = "900 74px " + sans;
+    ctx.fillText("学生证", 1015, 122);
+    ctx.font = "bold 30px Arial, sans-serif";
+    ctx.fillText("STUDENT ID", 1015, 169);
+    ctx.restore();
+
+    ctx.fillStyle = ink;
+    ctx.font = "bold 26px " + sans;
+    ctx.fillText("所属学院", 60, 248);
+    ctx.save();
+    ctx.translate(56, qualifier ? 337 : 365);
+    ctx.transform(1, 0, -0.10, 1, 0, 0);
+    ctx.font = "900 105px " + sans;
+    ctx.fillText(schoolName, 0, 0, 945);
+    ctx.restore();
     if (qualifier) {
-      ctx.font="700 39px "+type;
-      ctx.fillText(qualifier,56,821,716);
+      ctx.font = "bold 33px " + sans;
+      ctx.fillText(qualifier, 60, 385);
     }
-    ctx.fillStyle="#9db9ef";ctx.fillRect(57,footerTop,726,2);
-    ctx.textAlign="left";ctx.fillStyle="white";ctx.font="700 37px "+type;
-    ctx.fillText(title,57,footerTop+131);
-    ctx.fillStyle="#e1f464";ctx.font="26px "+type;
-    ctx.fillText(item.id ? "扫码参与分院" : "扫码试玩",58,footerTop+179);
-    window.QuizQR.draw(ctx,"home",548,footerTop+24,250);
-    return c.toDataURL("image/png");
-  }
-  function cardActions(item,status) {
-    const preview=el("details","card-preview");
-    const image=el("img","card-original");image.alt="可长按保存的分院结果卡"; image.hidden=true;
-    preview.append(el("summary","","查看结果卡原图"),image);
-    let drawing;
-    async function load() {
-      try {
-        drawing ??= drawCard(item);
-        const url=await drawing;
-        image.src=url;image.hidden=false;status.textContent="";return url;
-      } catch {drawing=null;status.textContent="结果卡暂时无法生成，请点「保存结果卡」重试。";return null;}
-    }
-    preview.addEventListener("toggle",() => {if (preview.open) load();});
-    const saveCard=btn("保存结果卡","action",async () => {
-      saveCard.disabled=true;
-      try {
-        const url=await load();
-        if (!url) return;
-        const link=el("a");link.download=(item.title || "分院试玩")+"-结果卡.png";link.href=url;
-        document.body.append(link);link.click();link.remove();
-        status.textContent="结果卡已生成。";
-      } finally {saveCard.disabled=false;}
-    });
-    return {saveCard,preview};
+
+    const scale = Math.min(960 / picture.naturalWidth, 700 / picture.naturalHeight);
+    const width = picture.naturalWidth * scale;
+    const height = picture.naturalHeight * scale;
+    ctx.drawImage(picture, 540 - width / 2, 758 - height / 2, width, height);
+
+    ctx.fillStyle = ink;
+    ctx.fillRect(60, 1144, 960, 3);
+    // The academy seal uses its assigned cloud expression.
+    ctx.beginPath();
+    ctx.arc(143, 1268, 77, 0, 2 * Math.PI);
+    ctx.strokeStyle = ink;
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(143, 1268, 66, 0, 2 * Math.PI);
+    ctx.fillStyle = ink;
+    ctx.fill();
+    const faceScale = Math.min(116 / face.naturalWidth, 106 / face.naturalHeight);
+    const faceWidth = face.naturalWidth * faceScale;
+    const faceHeight = face.naturalHeight * faceScale;
+    ctx.drawImage(face, 143 - faceWidth / 2, 1268 - faceHeight / 2, faceWidth, faceHeight);
+    ctx.fillStyle = ink;
+    ctx.font = "bold 42px " + sans;
+    ctx.fillText(title, 253, 1281);
+    window.QuizQR.draw(ctx, "home", 823, 1156, 196);
+    ctx.textAlign = "center";
+    ctx.font = "bold 24px " + sans;
+    ctx.fillText("扫码参与分院", 921, 1378);
+    return canvas.toDataURL("image/png");
   }
   function route(focus=true) {
     const hash=location.hash;
     if (trialEdition && hash.startsWith("#preview-")) {
       const [page,id] = hash.split("/");
-      const school = illustratedSchools.find(entry => entry.id === id);
-      if (school && page === "#preview-result") return schoolResult(school,focus,true);
-      if (school && page === "#preview-card") return studentCard(school,focus,true);
+      const school = previewSchools.find(entry => entry.id === id);
+      if (school && (page === "#preview-result" || page === "#preview-card")) return schoolResult(school,focus,true);
+      return home(focus);
     }
     if (hash==="#home") return home(focus);
     if (hash==="#result" && rehearsal()) return result(focus);
     if (hash==="#card") {
       const school = selectedSchool();
-      if (school && illustratedSchools.some(entry => entry.id === school.id)) return studentCard(school,focus);
+      if (school) return schoolResult(school,focus);
     }
     if (previewSchool) {
       if (hash==="#play") {

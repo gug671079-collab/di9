@@ -119,10 +119,10 @@ body[data-screen=home] main { width:100%; max-width:none; }
 .question-panel .action { color: white; background: var(--blue); }
 .question-panel .action:hover:not(:disabled) { background: #06277e; }
 .question-panel .action:disabled { background: #d7dce1; color: #596579; }
-.quiet, .card-preview summary { display: inline-flex; align-items: center; min-height: 42px; padding: 6px 0; border: 0; background: transparent; color: inherit; font-weight: 650; font-size: 14px; text-decoration: underline; text-underline-offset: .3em; }
-.quiet:hover, .card-preview summary:hover { text-decoration-thickness: 2px; }
-body:is([data-screen=school],[data-screen=result],[data-screen=card]) :is(.mast,footer) { display:none; }
-body:is([data-screen=school],[data-screen=result],[data-screen=card]) main { width:100%; max-width:none; }
+.quiet { display: inline-flex; align-items: center; min-height: 42px; padding: 6px 0; border: 0; background: transparent; color: inherit; font-weight: 650; font-size: 14px; text-decoration: underline; text-underline-offset: .3em; }
+.quiet:hover { text-decoration-thickness: 2px; }
+body:is([data-screen=school],[data-screen=result]) :is(.mast,footer) { display:none; }
+body:is([data-screen=school],[data-screen=result]) main { width:100%; max-width:none; }
 .admission {
   flex:1;
   display:grid;
@@ -135,12 +135,6 @@ body:is([data-screen=school],[data-screen=result],[data-screen=card]) main { wid
   text-align:center;
 }
 .admission-main { align-self:center; min-width:0; padding-block:clamp(10px,2svh,24px); }
-.admission-hat {
-  display:block;
-  width:min(74vw,40svh,430px);
-  height:auto;
-  margin:0 auto clamp(9px,2svh,24px);
-}
 .admission-name {
   max-width:100%;
   margin-inline:auto;
@@ -153,7 +147,6 @@ body:is([data-screen=school],[data-screen=result],[data-screen=card]) main { wid
   overflow-wrap:anywhere;
   animation:announce-name 420ms cubic-bezier(.16,1,.26,1) both;
 }
-.admission-main:has(.admission-hat) .admission-name { min-height:1.78em; }
 .admission-qualifier {
   display:block;
   margin-top:.22em;
@@ -174,26 +167,11 @@ body:is([data-screen=school],[data-screen=result],[data-screen=card]) main { wid
   animation:announce-copy 340ms 150ms ease-out both;
 }
 .admission-tools { width:min(100%,42rem); min-width:0; margin-inline:auto; }
-/* Both student IDs and downloadable result cards share the same control positions. */
-.admission:has(.admission-hat) .admission-tools { display:grid; grid-template-rows:auto minmax(42px,auto) auto auto auto; }
-.admission-tools .panel-actions { grid-row:1; }
-.admission-tools .card-preview { grid-row:2; margin-top:0; }
-.admission-tools .hint { grid-row:3; }
-.admission-tools :is(.school-mode,.alumni) { grid-row:4; }
-.admission-tools .school-links { grid-row:5; }
 .admission-tools .panel-actions,.admission-tools .school-links { justify-content:center; margin:0; gap:4px 18px; }
-.admission-tools .panel-actions:has(.student-card-link) {
-  display:grid;
-  grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
-  column-gap:clamp(4px,2vw,12px);
-}
-.admission-tools .panel-actions:has(.student-card-link) .action { grid-column:2; }
-.admission-tools .student-card-link { justify-self:start; font-size:13px; white-space:nowrap; }
-.admission-tools .quiet,.admission-tools summary { color:#ecf0ff; font-weight:500; }
+.admission-tools .quiet { color:#ecf0ff; font-weight:500; }
 .admission-tools .action { min-height:44px; padding:10px 20px; font-size:15px; }
 .admission-tools :is(.school-mode,.result-count,.hint) { color:#e0e7ff; font-size:13px; }
 .admission-tools :is(.school-mode,.result-count) { margin:12px 0 3px; }
-.admission-tools .card-original { margin-inline:auto; }
 @keyframes announce-name {
   from { opacity:0; transform:translateY(.10em) scale(.93); }
   to { opacity:1; transform:none; }
@@ -205,21 +183,22 @@ body:is([data-screen=school],[data-screen=result],[data-screen=card]) main { wid
 .result-count, .hint { color: #415a77; font-size: 13px; }
 .result-count { margin-top: 14px; }
 .result-count .quiet { margin-left: 8px; }
-.card-preview { margin-top: 10px; }
-.card-original { display: block; width: 100%; max-width: 375px; height: auto; margin-top: 8px; }
 .sr-only { position:absolute; width:1px; height:1px; padding:0; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
 .school-links { display:flex; flex-wrap:wrap; align-items:center; gap:2px 16px; margin:10px 0 0; }
-.student-card { width:min(100%, 1000px); margin:auto; display:grid; grid-template-columns:minmax(0,460px) minmax(220px,1fr); align-items:center; column-gap:clamp(28px,6vw,80px); padding:24px; }
-.student-id { display:block; width:100%; height:auto; }
-.school-tools { min-width:0; }
-.school-tools .panel-actions { margin:0; align-items:center; }
-.school-tools a.action:not([href]) { opacity:.5; pointer-events:none; }
-.school-mode,.school-tools .result-count { margin:12px 0 0; color:#f0f4ff; font-size:14px; }
-.student-id { max-width:460px; }
-@media (max-width:650px) {
-  .student-card { display:block; max-width:480px; padding:0; margin:0 auto; }
-  .school-tools { padding:18px var(--inset) max(26px,env(safe-area-inset-bottom)); }
+.student-id-result {
+  --id-width:min(100%, max(230px, 54svh), 28rem);
+  min-height:0;
+  grid-template-rows:auto auto;
+  align-content:center;
+  justify-items:center;
+  gap:clamp(12px,2svh,20px);
+  padding:clamp(16px,3svh,36px) max(12px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));
 }
+.student-id-result :is(.admission-main,.admission-tools) { width:var(--id-width); padding:0; }
+.student-id-result .student-id-art { display:block; width:100%; height:auto; }
+.student-id-result .panel-actions .action { width:100%; min-height:48px; font-size:16px; }
+.student-id-result .hint:not(:empty) { margin:8px 0 0; }
+body[data-screen=school] .shell:has(+ .edition-nav) { min-height:calc(100svh - 44px); }
 @media (min-width:1500px) {
   .mast { min-height: 90px; }
 }
@@ -253,7 +232,7 @@ body:is([data-screen=school],[data-screen=result],[data-screen=card]) main { wid
 }
 @media print {
   :root, body { color: #10182d; background: white; }
-  footer, .mast, .panel-actions, .quiet, .card-preview, .hint { display: none; }
+  footer, .mast, .panel-actions, .quiet, .hint { display: none; }
   .admission { min-height:auto; color:#142b69; }
   .admission-copy { color:inherit; }
   .admission-tools { display:none; }
