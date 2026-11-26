@@ -378,19 +378,16 @@
       section.querySelector(".admission-main").prepend(hat);
     }
     const actions = el("div","panel-actions");
-    const illustrated = illustratedSchools.some(entry => entry.id === school.id);
-    if (illustrated) {
-      const claim = el("a","action","领取学生证");
+    const status = el("p","hint");
+    status.setAttribute("role","status");
+    const card = cardActions(school,status);
+    actions.append(card.saveCard);
+    if (illustratedSchools.some(entry => entry.id === school.id)) {
+      const claim = el("a","quiet student-card-link","领取学生证");
       claim.href = trialPreview ? "#preview-card/"+school.id : "#card";
       actions.append(claim);
-    } else {
-      const status = el("p","hint");
-      status.setAttribute("role","status");
-      const card = cardActions(school,status);
-      actions.append(card.saveCard);
-      tools.append(card.preview,status);
     }
-    tools.prepend(actions);
+    tools.append(actions,card.preview,status);
     if (sample) {
       tools.append(el("p","school-mode","学院效果预览 · 本次不计入校友人数"));
     } else if (trialEdition) {

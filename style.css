@@ -182,6 +182,13 @@ body:is([data-screen=school],[data-screen=result],[data-screen=card]) main { wid
 .admission-tools :is(.school-mode,.alumni) { grid-row:4; }
 .admission-tools .school-links { grid-row:5; }
 .admission-tools .panel-actions,.admission-tools .school-links { justify-content:center; margin:0; gap:4px 18px; }
+.admission-tools .panel-actions:has(.student-card-link) {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  column-gap:clamp(4px,2vw,12px);
+}
+.admission-tools .panel-actions:has(.student-card-link) .action { grid-column:2; }
+.admission-tools .student-card-link { justify-self:start; font-size:13px; white-space:nowrap; }
 .admission-tools .quiet,.admission-tools summary { color:#ecf0ff; font-weight:500; }
 .admission-tools .action { min-height:44px; padding:10px 20px; font-size:15px; }
 .admission-tools :is(.school-mode,.result-count,.hint) { color:#e0e7ff; font-size:13px; }
