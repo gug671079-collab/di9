@@ -546,26 +546,27 @@
     ctx.drawImage(face, 104 - faceWidth / 2, 1268 - faceHeight / 2, faceWidth, faceHeight);
     ctx.fillStyle = ink;
     if (item.verdict) {
-      const left = 168, width = 428, lineHeight = 43;
-      ctx.font = "600 32px " + sans;
-      const lines = cardTextLines(ctx, item.verdict.text, width);
+      const left = 158, width = 492, lineHeight = 49;
+      ctx.font = "700 37px " + sans;
+      const text = item.verdict.text;
+      const lines = ctx.measureText(text).width <= width * 1.08 ? [text] : cardTextLines(ctx, text, width);
       const author = item.verdict.author;
       const firstBaseline = 1281 - ((lines.length - 1) * lineHeight + (author ? 45 : 0)) / 2;
-      lines.forEach((line, index) => ctx.fillText(line, left, firstBaseline + index * lineHeight));
+      lines.forEach((line, index) => ctx.fillText(line, left, firstBaseline + index * lineHeight, width));
       if (author) {
-        ctx.font = "500 27px " + sans;
+        ctx.font = "500 30px " + sans;
         ctx.fillText("——" + author, left, firstBaseline + (lines.length - 1) * lineHeight + 45, width);
       }
     } else {
       ctx.font = "bold 42px " + sans;
       ctx.fillText(title, 168, 1281);
     }
-    window.QuizQR.draw(ctx, "nice", 615, 1156, 196);
-    window.QuizQR.draw(ctx, "home", 823, 1156, 196);
+    window.QuizQR.draw(ctx, "nice", 670, 1199, 147);
+    window.QuizQR.draw(ctx, "home", 860, 1198, 148);
     ctx.textAlign = "center";
-    ctx.font = "bold 24px " + sans;
-    ctx.fillText("NICE老师", 713, 1378);
-    ctx.fillText("扫码参与分院", 921, 1378);
+    ctx.font = "bold 21px " + sans;
+    ctx.fillText("NICE老师欢迎投票！", 744, 1378);
+    ctx.fillText("扫码参与分院", 934, 1378);
     return canvas.toDataURL("image/png");
   }
   function route(focus=true) {
