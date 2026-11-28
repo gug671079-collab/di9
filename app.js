@@ -375,11 +375,7 @@
     section.querySelector("h1").classList.add("sr-only");
     const image = el("img","student-id student-id-art");
     image.alt = school.title + "学生证";
-    const verdict = school.verdict;
-    if (verdict) {
-      image.alt += "。" + verdict.text;
-      if (verdict.author) image.alt += " ——" + verdict.author;
-    }
+    if (school.verdict?.text) image.alt += "。" + school.verdict.text;
     image.hidden = true;
     section.querySelector(".admission-main").append(image);
     const actions = el("div","panel-actions");
@@ -548,27 +544,17 @@
     const faceHeight = face.naturalHeight * faceScale;
     ctx.drawImage(face, 104 - faceWidth / 2, 1268 - faceHeight / 2, faceWidth, faceHeight);
     ctx.fillStyle = ink;
-    if (item.verdict) {
-      const left = 158, width = 492, lineHeight = 49;
+    if (item.verdict?.text) {
+      const left = 168, width = 656, lineHeight = 49;
       ctx.font = "700 37px " + sans;
       const text = item.verdict.text;
       const lines = ctx.measureText(text).width <= width * 1.08 ? [text] : cardTextLines(ctx, text, width);
-      const author = item.verdict.author;
-      const firstBaseline = 1281 - ((lines.length - 1) * lineHeight + (author ? 45 : 0)) / 2;
+      const firstBaseline = 1281 - (lines.length - 1) * lineHeight / 2;
       lines.forEach((line, index) => ctx.fillText(line, left, firstBaseline + index * lineHeight, width));
-      if (author) {
-        ctx.font = "500 30px " + sans;
-        ctx.fillText("——" + author, left, firstBaseline + (lines.length - 1) * lineHeight + 45, width);
-      }
-    } else {
-      ctx.font = "bold 42px " + sans;
-      ctx.fillText(title, 168, 1281);
     }
-    window.QuizQR.draw(ctx, "nice", 670, 1199, 147);
     window.QuizQR.draw(ctx, "home", 860, 1198, 148);
     ctx.textAlign = "center";
     ctx.font = "bold 21px " + sans;
-    ctx.fillText("NICE老师欢迎投票！", 744, 1378);
     ctx.fillText("扫码参与分院", 934, 1378);
     return canvas.toDataURL("image/png");
   }
